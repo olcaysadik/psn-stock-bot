@@ -1,88 +1,96 @@
-name: PSN Amazon Stock Monitor
+#!/usr/bin/env python3
+"""Amazon.in PSN gift-card watcher with conservative parsing and persistent GitHub Issue state.
 
-on:
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: "Once diagnose, sonra test (email), monitor normal calisma"
-        required: true
-        default: diagnose
-        type: choice
-        options:
-          - diagnose
-          - test
-          - monitor
-  schedule:
-    - cron: '7,17,27,37,47,57 * * * *'
+Does not solve or bypass CAPTCHAs. Never treats a challenge page as an in-stock product.
+"""
+import argparse
+import json
+import os
+import re
+import smtplib
+import ssl
+import sys
+import time
+from datetime import datetime, timezone
+from email.message import EmailMessage
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-permissions:
-  contents: read
-  issues: write
+PRODUCTS = {
+    "B093QF35KZ": "Amazon India PSN Gift Card (B093QF35KZ)",
+    "B0C1H473H8": "Amazon India PSN Gift Card (B0C1H473H8)",
+    "B07K6RYVHR": "Amazon India Sony PlayStation Rs. 1000 Gift Card (B07K6RYVHR)",
+}
+ISSUE_TITLE = "[psn-stock-bot-state] Otomatik durum kaydi"
+CAPTCHA_PATTERNS = (
+    "enter the characters you see",
+    "type the characters you see",
+    "robot check",
+    "validatecaptcha",
+    "sorry, we just need to make sure you're not a robot",
+)
+OUT_PATTERNS = (
+    "currently unavailable", "temporarily out of stock", "out of stock",
+    "we don't know when or if this item will be back in stock",
+    "not currently available", "currently not available", "sold out",
+)
+IN_PATTERN = re.compile(r"\bin stock\b|\bavailable now\b|only \d+ left in stock", re.I)
+STATE_MARK = "PSN_STOCK_BOT_STATE_V1"
 
-concurrency:
-  group: psn-stock-monitor
-  cancel-in-progress: false
 
-jobs:
-  watch:
-    if: ${{ github.event_name != 'schedule' || vars.BOT_ENABLED == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Python dependencies
-        run: python -m pip install -r requirements.txt
-      - name: Chromium installation
-        run: python -m playwright install --with-deps chromium
-      - name: Check Amazon and send alerts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
-          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CHECK_MODE: ${{ github.event_name == 'schedule' && 'monitor' || inputs.mode }}
-        run: python monitor.py --mode "${CHECK_MODE:-diagnose}"
+def now():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-      - name: Amazon screenshots (diagnose only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'diagnose' }}
-        run: |
-          mkdir -p debug
-          python - <<'PY'
-          from pathlib import Path
-          from playwright.sync_api import sync_playwright
 
-          asins = ["B07K6RYVHR", "B093QF35KZ", "B0C1H473H8"]
-          with sync_playwright() as playwright:
-              browser = playwright.chromium.launch(headless=True)
-              try:
-                  for asin in asins:
-                      page = browser.new_page(locale="en-IN", timezone_id="Asia/Kolkata", viewport={"width": 1440, "height": 900})
-                      try:
-                          response = page.goto(f"https://www.amazon.in/dp/{asin}", wait_until="domcontentloaded", timeout=35000)
-                          page.wait_for_timeout(1500)
-                          page.screenshot(path=f"debug/{asin}.png", full_page=False)
-                          info = f"ASIN: {asin}\nHTTP: {response.status if response else 'no response'}\nURL: {page.url}\nTitle: {page.title()}\n"
-                          Path(f"debug/{asin}.txt").write_text(info, encoding="utf-8")
-                          print(info)
-                      except Exception as exc:
-                          Path(f"debug/{asin}.txt").write_text(str(exc), encoding="utf-8")
-                          print(asin, type(exc).__name__, str(exc)[:200])
-                      finally:
-                          page.close()
-              finally:
-                  browser.close()
-          PY
+def classify(status_code, url, title, heading, body, availability, buy_button):
+    """Classify as BLOCKED, OUT_OF_STOCK, IN_STOCK, POSSIBLE or UNKNOWN.
 
-      - name: Upload screenshots
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.mode == 'diagnose' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: amazon-debug-screenshots
-          path: debug/
-          if-no-files-found: warn
-          retention-days: 1
+    Only information from an identified product page can produce a stock result.
+    """
+    low_title = (title or "").lower()
+    low_body = (body or "").lower()
+    low_avail = (availability or "").lower()
+    low_heading = (heading or "").lower()
+    if status_code in (403, 429, 503):
+        return "BLOCKED", f"HTTP {status_code}"
+    if status_code != 200:
+        return "UNKNOWN", f"HTTP {status_code}"
+    if ("robot check" in low_title or "captcha" in low_title or
+            any(term in low_body[:1400] for term in CAPTCHA_PATTERNS)):
+        return "BLOCKED", "CAPTCHA / robot verification"
+    # Never infer availability from an Amazon landing page or a generic redirect.
+    if not heading or not any(word in low_heading for word in ("playstation", "psn", "sony")):
+        return "UNKNOWN", "PSN urun basligi dogrulanamadi"
+    if "amazon.in" not in url.lower():
+        return "UNKNOWN", "Amazon.in disina yonlendirildi"
+    if any(term in low_avail for term in OUT_PATTERNS):
+        return "OUT_OF_STOCK", "Urunun availability alaninda stok yok"
+    if any(term in low_avail for term in ("in stock", "available now")) and not any(term in low_avail for term in OUT_PATTERNS):
+        return "IN_STOCK", "Availability alaninda stok var"
+    if IN_PATTERN.search(low_avail):
+        return "IN_STOCK", "Availability alaninda stok var"
+    # Product-wide text can contain unrelated recommendations. Limit the search to
+    # the leading portion of the page and only use it for out-of-stock exclusions.
+    if any(term in low_body[:5000] for term in OUT_PATTERNS):
+        return "OUT_OF_STOCK", "Urun sayfasinda stok yok ifadesi"
+    if buy_button:
+        return "POSSIBLE", "Satin alma butonu gorunur; stok kesin degil"
+    return "UNKNOWN", "Stok bilgisi belirsiz"
+
+
+def browser_check(asin, browser):
+    page = browser.new_page(locale="en-IN", timezone_id="Asia/Kolkata")
+    page.set_default_timeout(10000)
+    target = f"https://www.amazon.in/dp/{asin}"
+    try:
+        response = page.goto(target, wait_until="domcontentloaded", timeout=35000)
+        page.wait_for_timeout(1100)
+        http = response.status if response else 0
+        title = page.title()
+        try:
+            body = page.locator("body").inner_text(timeout=7000)[:16000]
+        except Exception:
+            body = ""
+        heading = ""
+        for selector in ("#productTitle", "#title span", "h1#title", "h1.a-size-large"):
+            loc = page.locator(selector).first
