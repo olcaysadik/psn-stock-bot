@@ -2,7 +2,7 @@
 
 Bu depo üç ürünü bağımsız kontrol eder. **Gerçek GitHub Actions teşhisi doğrulanmadan otomatik izlemeyi açmayın.** Kod testlerinin geçmesi Amazon'a erişilebildiği anlamına gelmez. Ücretli servis, proxy veya CAPTCHA çözücü kullanılmaz.
 
-13 Kasım 2026 doğrulaması: son üç bağımsız GitHub runner denemesinde 36/36 gerçek ürün kontrolü başarılı, üç ürün de stokta yok. Secret'lar eklendi; son Gmail testi uygulama şifresi biçimi geçersiz olduğu için gönderimden önce durdu. Gmail testi tamamlanana kadar otomatik izleme kapalıdır. Kanıtlar [DIAGNOSTICS.md](DIAGNOSTICS.md) dosyasındadır.
+13 Kasım 2026: **otomatik izleme açık (`BOT_ENABLED=true`)**. Gmail test mesajı gönderildi ve kullanıcı teslim aldığını doğruladı. Üç ürün de son gerçek monitor çalışmasında stokta yok olarak doğrulandı; kalıcı geçmiş [Issue #1](https://github.com/olcaysadik/psn-stock-bot/issues/1) içinde saklanıyor. Son sürümün 42 testi geçti. Kanıtlar [DIAGNOSTICS.md](DIAGNOSTICS.md) dosyasındadır.
 
 | Ürün | ASIN | Doğrudan bağlantı |
 |---|---|---|

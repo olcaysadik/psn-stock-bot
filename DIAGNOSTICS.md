@@ -1,14 +1,24 @@
 # Gerçek doğrulama kaydı — 13 Kasım 2026
 
-**Güncel durum: kod ve gerçek bulut stok okuması doğrulandı; Gmail uygulama şifresi düzeltmesi bekleniyor, otomatik izleme kapalı.** Son üç bağımsız runner denemesinde toplam 36/36 gerçek ürün kontrolü başarılı. Secret'lar eklendikten sonraki son Gmail testi, uygulama şifresi biçimi geçersiz olduğu için bağlantı kurulmadan durdu. Gerçek stok e-postası ve canlı monitor geçmiş döngüsü henüz tamamlanmadı.
+**Güncel durum: otomatik izleme açık, Gmail testi teslim edildi, ilk gerçek monitor çalışması başarılı.** Son üç bağımsız teşhis runner'ında 36/36 ürün kontrolü başarılı. Ek olarak gerçek monitor modunda üç ürün doğru kimlikle stokta yok olarak okundu ve kalıcı geçmiş yazıldı. Gerçek stok-var sayfası görülmediğinden stok geçiş e-postası örneklerle; SMTP teslimi ise gerçek test e-postasıyla doğrulandı.
 
-## Gmail kurulumunun gerçek testi
+## Etkinleştirme ve ilk gerçek monitor çalışması
+
+- Kullanıcı Google uygulama şifresini düzeltti. Gmail testi ikinci denemede başarılı: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43485742946
+- Gmail sunucusu 19:52 Europe/Berlin (18:52 UTC) civarında TLS port 465 üzerinden mesajı kabul etti. Kullanıcı `PSN STOCK BOT - Gmail test` mesajını teslim aldığını doğruladı. Alternatif port kullanılmasına gerek kalmadı.
+- `BOT_ENABLED=true` repository variable'ı yaklaşık 19:53 Europe/Berlin'de kaydedildi. Otomatik cron `*/10 * * * *`; GitHub gecikmeleri olabilir.
+- İlk gerçek monitor: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43487201153 — başarılı.
+- Kalıcı geçmiş: https://github.com/olcaysadik/psn-stock-bot/issues/1 — üç ASIN için `last_confirmed=OUT_OF_STOCK`, `notification=armed`, `failures=0` kaydedildi.
+- İlk monitor artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43487201153/artifacts/14067836950
+- Bu kontrolde stok yok olduğundan stok e-postası gönderilmedi.
+
+## Gmail kurulumunda düzeltilen hatalar
 
 - Secret'lar eklendikten sonra eski testin ikinci denemesi `SMTPServerDisconnected` hatasıyla durdu. Kullanıcı test e-postasının ulaşmadığını doğruladı; gelen GitHub başarısız-workflow bildirimi botun test e-postası değildir.
 - Güvenli SMTP aşama teşhisi, Google uygulama şifresi biçim kontrolü ve yalnızca gönderim başlamadan TLS 587 alternatifi eklendi: https://github.com/olcaysadik/psn-stock-bot/commit/07a7a86b603b676d9a0f84e2353c7624376dd182
-- Son Gmail testi: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43485742946
-- Son hata: `SMTP_APP_PASSWORD must be a 16-character Google app password (spaces are ignored)`.
-- Bu test SMTP'ye bağlanmadı ve e-posta göndermedi. Secret değeri okunmadı veya loglanmadı. Kullanıcının Google'dan oluşturduğu gerçek uygulama şifresiyle aynı GitHub secret'ını güncellemesi gerekir.
+- Yeni kodla ilk Gmail denemesi: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43485742946
+- İlk denemedeki hata: `SMTP_APP_PASSWORD must be a 16-character Google app password (spaces are ignored)`.
+- Biçimi geçersiz olan ilk deneme SMTP'ye bağlanmadı ve e-posta göndermedi. Kullanıcı secret'ı düzelttikten sonra ikinci deneme başarılı oldu. Secret değerleri okunmadı veya loglanmadı.
 - Son kodda GitHub üzerinde 34 birim testi ve 8 Chromium testi başarılı (toplam 42).
 - Yeni gerçek Amazon teşhisi de 12/12 başarılı: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43485665089
 - Artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43485665089/artifacts/14067427581
@@ -73,16 +83,14 @@ E-hediye kartında ayrıca alıcı e-postası/mesaj alanları ve `gc-order-form-
 - İlk doğrulanmış sürümde yerelde 36 test geçti; 8'i Chromium'da çevrimdışı HTML testidir. SMTP düzeltmesinden sonra yerelde 34 birim testi geçti; 8 Chromium testi GitHub'da çalıştırıldı.
 - Son GitHub sürümünde 34 birim testi ve 8 Chromium testi geçti. Bu örnek testler ayrıca yapılan gerçek Amazon erişim teşhislerinin yerine geçmez.
 - YAML ayrıştırması ve yapı testleri geçti; yerelde actionlint 1.7.12 hata vermedi.
-- Kalıcı geçmişin yeniden yüklenmesi, UNKNOWN/BLOCKED sonrası tekrar bildirim olmaması, doğrulanmış stok yok→stok var geçişi, SMTP belirsizliği ve gönderim sonrası kayıt hatası örneklerle test edildi. Canlı SMTP olmadan uçtan uca gerçek stok e-postası ve gerçek monitor geçmiş döngüsü tamamlanmış sayılmaz.
+- Kalıcı geçmişin yeniden yüklenmesi, UNKNOWN/BLOCKED sonrası tekrar bildirim olmaması, doğrulanmış stok yok→stok var geçişi, SMTP belirsizliği ve gönderim sonrası kayıt hatası örneklerle test edildi. Gerçek SMTP test mesajı kullanıcı tarafından teslim alındı; gerçek monitor modunda kalıcı kayıt oluşturuldu. Gerçek IN_STOCK geçişi gözlenmediği için stok geçiş e-postası örneklerle sınandı.
 - Gmail test modu GitHub'da gerçekten çalıştırıldı: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476159047
-- İlk deneme `Missing GitHub Actions secrets: SMTP_USER, SMTP_APP_PASSWORD` ile durmuştu; sonradan secret'lar eklendi. Güncel Gmail engeli yukarıdaki uygulama şifresi biçim hatasıdır.
+- İlk deneme `Missing GitHub Actions secrets: SMTP_USER, SMTP_APP_PASSWORD` ile durmuştu; sonradan secret'lar eklendi ve uygulama şifresi düzeltildi. Güncel Gmail testi başarılıdır.
 - `ALERT_EMAIL`, `SMTP_USER` ve `SMTP_APP_PASSWORD` secret'ları mevcuttur; değerleri rapora yazılmaz.
-- `BOT_ENABLED` değişkeni yok; otomatik izleme **kapalı**. Gmail testi başarılı olmadan etkinleştirilmedi.
+- `BOT_ENABLED=true`; otomatik izleme **açık**. Gerçek Amazon teşhisleri ve Gmail teslimi doğrulandıktan sonra etkinleştirildi.
 
-## Kalan minimum işlem
+## Kullanıcının yapması gerekenler
 
-1. Google Uygulama Şifreleri sayfasından 16 karakterlik yeni bir uygulama şifresi oluşturup GitHub'daki `SMTP_APP_PASSWORD` secret'ını güncelleyin. Normal Gmail giriş şifresi kullanılmaz. Şifreyi sohbet veya depoya düz metin olarak yazmayın.
-2. Workflow'u `test` modunda çalıştırıp test e-postasını alın.
-3. Gmail testi teslim alındıktan sonra `BOT_ENABLED=true` repository variable'ını ekleyin ve `monitor` çalıştırın. İlk monitor çalışması kalıcı state issue'sunu oluşturur. Bundan sonra yaklaşık 10 dakikada bir bulutta çalışır; GitHub zamanlama gecikmeleri ve 60 günlük hareketsizlik sınırı README'de açıklanmıştır.
+Kurulum için ek manuel işlem gerekmiyor. State issue'sunu silmeyin/düzenlemeyin. Gmail hesap şifresi değişirse Google uygulama şifresini iptal edebilir; yeni uygulama şifresiyle secret'ı güncelleyin. Public depolarda 60 günlük hareketsizlik sonrası GitHub zamanlamayı devre dışı bırakabilir; böyle bir durumda yeniden etkinleştirin. Zamanlama gecikmeleri ve kesintisiz erişim garantisi olmaması README'de açıklanmıştır.
 
 Resmi API ve ücretsiz kaynak araştırmasının sonucu README'dedir: Creators API uygunluk/kimlik bilgisi ister; Keepa API aboneliklidir. Bu üç ASIN için ücretsiz, 10 dakikalık güncel ve doğrulanmış alternatif stok akışı bulunmadığından fiyat geçmişi stok kaynağı olarak kullanılmadı.
