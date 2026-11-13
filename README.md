@@ -77,6 +77,8 @@ Sınıflandırma, CAPTCHA, ASIN/host kontrolü, yanlış pozitifler, stok geçi�
 
 ## Amazon erişimi engellenirse
 
+Normal `Continue shopping` ara ekranında yalnızca o düğme bir kez izlenir ve ürün/ASIN/stok yeniden doğrulanır. Önceki ara ekranın görüntüsü ve geçiş bilgisi raporda saklanır. CAPTCHA alanı/görseli veya robot doğrulama metni varsa düğmeye basılmaz. Devam sayfası tekrar gelirse `BLOCKED` kalır; döngü, CAPTCHA çözümü veya gizleme tekniği kullanılmaz.
+
 Önce Actions artifact ekran görüntülerini ve `report.json` içindeki denemeleri karşılaştırın. Yalnızca başlığın `Amazon.in` olması CAPTCHA kanıtı değildir; doğrulama metni/alanı ayrıca kaydedilir. Kısa URL'nin özgün URL'den daha iyi olduğu varsayılmaz. Tek bir başarılı sayfa, bütün ürünler için sürekli erişim anlamına gelmez.
 
 Amazon'un güncel resmi [Creators API](https://affiliate-program.amazon.in/creatorsapi/docs/en-us/introduction) hizmeti ürün katalog erişimi sağlar. India Associates üyeliği, onay, API kaydı ve belgedeki satış uygunluğu şartları vardır (belgede son 30 günde en az 10 uygun satış belirtilir). Eski PA-API dokümanları yeni kullanıcıları Creators API'ye yönlendirir. Bu proje için herkese açık, kimlik bilgisi gerektirmeyen bir stok API'si doğrulanmamıştır; bu üç dijital ASIN'in API kapsamı da ayrıca test edilmelidir.

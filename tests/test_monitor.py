@@ -54,6 +54,11 @@ class ClassificationTests(unittest.TestCase):
         for code in (0, 404, 500):
             self.assertEqual(self.status(http=code), "UNKNOWN")
 
+    def test_continue_shopping_is_blocked_not_a_visual_captcha(self):
+        classified = m.classify(ASIN, facts(body="Click the button below to continue shopping"))
+        self.assertEqual(classified[0], "BLOCKED")
+        self.assertFalse(classified[3])
+
     def test_fallback_page_and_wrong_title(self):
         for heading in ("", "Sony television", "PlayStation console", "Amazon.in"):
             self.assertEqual(self.status(heading=heading), "UNKNOWN")

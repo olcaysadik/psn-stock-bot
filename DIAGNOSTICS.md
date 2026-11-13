@@ -1,5 +1,15 @@
 # Gerçek doğrulama kaydı — 13 Kasım 2026
 
+**Güncel durum: kısmen çalışır; otomatik izleme kapalı.** İlk başarılı teşhis sonraki bağımsız runner'larda tekrarlanamadı. Sonraki kontroller Amazon'un `Continue shopping` ara sayfasını gösterdi. Normal devam düğmesini bir kez izleyip gerçek ürün kimliğini yeniden doğrulayan düzeltmenin bulut testi ayrıca yapılmaktadır. Gmail kimlik bilgileri de eksiktir.
+
+## Bağımsız tekrar testleri
+
+- Run #7: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476793358 — 12 isteğin 10'u doğrulama ara ekranı, 2'si gerçek stok yok sayfası. Üç ASIN'in tamamı için tutarlılık testi başarısız (`BLOCKED`).
+- Run #8: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476960724 — 12/12 istek ara ekran. Hiçbir stok bilgisi doğrulanamadı.
+- Run #7 artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476793358/artifacts/14062937468
+
+Ekran görüntüsü, başlık `Amazon.in`, ürün başlığı yok ve `Click the button below to continue shopping` mesajını gösterir. Bu, ürün stok bilgisi değildir. Bu ekran tek başına görsel CAPTCHA kanıtı da değildir; önceki sürüm bunu ortak CAPTCHA/verification bayrağında raporluyordu. Yeni sürüm normal ara ekranı ayrı kaydeder, gerçek CAPTCHA alanı/görseli varsa müdahale etmez. IP itibarı, oturum ve bölge etkileri bu örneklerden tek başına kesin ayrıştırılamaz; sorun gerçek sayfa doğrulamasının yanlış reddi değildir çünkü dönen ekran ürün sayfası değildir.
+
 ## İlk onarım ve canlı bulut testi
 
 - Depo: https://github.com/olcaysadik/psn-stock-bot

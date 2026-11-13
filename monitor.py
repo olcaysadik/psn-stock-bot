@@ -31,7 +31,7 @@ CONFIRMED = {"IN_STOCK", "OUT_OF_STOCK"}
 CAPTCHA_PATTERNS = (
     "enter the characters you see", "type the characters you see", "robot check",
     "validatecaptcha", "make sure you're not a robot", "verify you are human",
-    "verify that you're not a robot", "click the button below to continue shopping",
+    "verify that you're not a robot",
 )
 OUT_PATTERNS = (
     "currently unavailable", "temporarily out of stock", "out of stock", "sold out",
@@ -86,6 +86,8 @@ def classify(asin, facts):
     )
     if challenge:
         return "BLOCKED", "Amazon verification/CAPTCHA page", False, True
+    if facts.get("continue_shopping") or "click the button below to continue shopping" in facts.get("body", "").lower():
+        return "BLOCKED", "Amazon Continue shopping interstitial", False, False
     http = facts.get("http", 0)
     if http in {403, 429, 503}:
         return "BLOCKED", f"HTTP {http}: access denied or service unavailable", False, False
@@ -121,11 +123,13 @@ def inspect_page(page):
       return {
         title: document.title, heading: heading?.innerText.trim() || '',
         body: document.body?.innerText || '', page_asins: [...new Set(asins)],
+        continue_shopping: /click the button below to continue shopping/i.test(document.body?.innerText || ''),
         availability: availabilitySelectors.flatMap(s => [...document.querySelectorAll(s)])
           .filter(visible).map(e => e.innerText.trim()).filter(Boolean),
         purchase_enabled: controls.some(enabled),
         purchase_controls: controls.map(e => ({id:e.id, enabled:!!enabled(e)})),
-        challenge_element: !!document.querySelector('form[action*="validateCaptcha"], #captchacharacters, input[name="cvf_captcha_input"]'),
+        challenge_element: !!document.querySelector('#captchacharacters, input[name="cvf_captcha_input"], img[src*="/captcha/"]'),
+        challenge_form: !!document.querySelector('form[action*="validateCaptcha"]'),
         gift_card_form: !!document.querySelector('#gc-buy-box, #gc-amount, #gc-customization-form, #gc-order-form-asin, #gc-order-form-type')
       };
     }""", {"availabilitySelectors": AVAILABILITY_SELECTORS, "purchaseSelectors": PURCHASE_SELECTORS})
@@ -139,6 +143,7 @@ def browser_check(asin, browser, target, output_dir, label):
     page.set_default_timeout(5000)
     facts = {"http": 0, "url": target, "title": "", "heading": "", "availability": [], "page_asins": []}
     error = None
+    continuation = {"attempted": False}
     try:
         response = page.goto(target, wait_until="domcontentloaded", timeout=35000)
         facts["http"] = response.status if response else 0
@@ -148,6 +153,31 @@ def browser_check(asin, browser, target, output_dir, label):
             pass
         page.wait_for_timeout(1500)
         facts.update(inspect_page(page))
+        # An ordinary navigation interstitial is not a visual CAPTCHA. Follow its
+        # exact Continue shopping button once, only if no real CAPTCHA is present.
+        if facts.get("continue_shopping") and not classify(asin, facts)[3]:
+            continuation.update(initial_http=facts["http"], initial_title=facts["title"],
+                                initial_url=safe_url(facts["url"]))
+            button = page.get_by_role("button", name="Continue shopping", exact=True)
+            if button.count() == 1 and button.is_visible() and button.is_enabled():
+                continuation["attempted"] = True
+                try:
+                    entry = output_dir / f"{asin}-{label}-entry.png"
+                    page.screenshot(path=str(entry), timeout=8000,
+                                    mask=[page.locator("#nav-tools, #glow-ingress-block, input, textarea")])
+                    continuation["entry_screenshot"] = entry.name
+                except Exception:
+                    pass
+                with page.expect_navigation(wait_until="domcontentloaded", timeout=25000) as navigation:
+                    button.click(timeout=5000)
+                continued_response = navigation.value
+                facts["http"] = continued_response.status if continued_response else 0
+                try:
+                    page.locator("#productTitle, #captchacharacters, #gc-title, #availability").first.wait_for(timeout=5000)
+                except Exception:
+                    pass
+                page.wait_for_timeout(1500)
+                facts.update(inspect_page(page))
     except Exception as exc:
         error = type(exc).__name__  # Exception payloads can contain sensitive URLs.
         facts["url"] = page.url
@@ -161,7 +191,8 @@ def browser_check(asin, browser, target, output_dir, label):
     result = {k: v for k, v in facts.items() if k != "body"}
     result.update(asin=asin, requested_url=safe_url(target), url=safe_url(facts["url"]),
                   status=status, reason=reason, identified=identified, captcha=captcha,
-                  detected_at=now(), body_length=len(facts.get("body", "")), error=error)
+                  detected_at=now(), body_length=len(facts.get("body", "")), error=error,
+                  continuation=continuation)
     try:
         screenshot = output_dir / f"{asin}-{label}.png"
         page.screenshot(path=str(screenshot), full_page=False, timeout=8000,

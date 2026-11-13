@@ -1,5 +1,7 @@
 """Offline rendered-HTML tests. Set RUN_BROWSER_TESTS=true after installing Chromium."""
 import os
+from pathlib import Path
+import tempfile
 import unittest
 from playwright.sync_api import sync_playwright
 import monitor as m
@@ -56,3 +58,28 @@ class RenderedPageTests(unittest.TestCase):
     def test_captcha_and_generic_fallback(self):
         self.assertEqual(self.check('<title>Amazon.in</title><form action="/errors/validateCaptcha"><input id="captchacharacters"></form>'), "BLOCKED")
         self.assertEqual(self.check('<title>Amazon.in</title><p>Continue shopping</p>'), "UNKNOWN")
+
+    def test_ordinary_continue_navigation_rechecks_actual_product(self):
+        real_browser = self.browser
+        test_case = self
+        counts = {"entry": 0, "product": 0}
+        class RoutedBrowser:
+            def new_context(self, **kwargs):
+                context = real_browser.new_context(**kwargs)
+                def route_request(route):
+                    if m.safe_url(route.request.url).endswith('/continued'):
+                        counts["product"] += 1
+                        body = test_case.html("Currently unavailable", "")
+                    else:
+                        counts["entry"] += 1
+                        body = '<title>Amazon.in</title><p>Click the button below to continue shopping</p><form action="/dp/B07K6RYVHR/continued"><button>Continue shopping</button></form>'
+                    route.fulfill(status=200, content_type="text/html", body=body)
+                context.route("**/*", route_request)
+                return context
+        with tempfile.TemporaryDirectory() as directory:
+            result = m.browser_check(ASIN, RoutedBrowser(), m.product_url(ASIN), Path(directory), "fixture")
+        self.assertEqual(result["status"], "OUT_OF_STOCK")
+        self.assertTrue(result["identified"])
+        self.assertTrue(result["continuation"]["attempted"])
+        self.assertFalse(result["captcha"])
+        self.assertEqual(counts, {"entry": 1, "product": 1})
