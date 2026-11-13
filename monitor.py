@@ -38,7 +38,10 @@ OUT_PATTERNS = (
     "not currently available", "currently not available", "not in stock", "no longer available",
     "we don't know when or if this item will be back in stock",
 )
-IN_PATTERN = re.compile(r"^\s*(?:in stock\b|available now\b|only\s+\d+\s+left in stock\b)", re.I | re.M)
+IN_PATTERN = re.compile(
+    r"^\s*(?:in stock|available now|only\s+\d+\s+left in stock(?:\s*[-–—,]\s*order soon)?)[.!]?\s*$",
+    re.I | re.M,
+)
 AVAILABILITY_SELECTORS = (
     "#availability", "#availabilityInsideBuyBox_feature_div", "#outOfStock",
     "#availability_feature_div", "#gc-availability", "#gcAvailability",
