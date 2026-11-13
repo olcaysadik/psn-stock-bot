@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 PRODUCTS = {
     "B093QF35KZ": "Amazon India PSN Gift Card (B093QF35KZ)",
     "B0C1H473H8": "Amazon India PSN Gift Card (B0C1H473H8)",
+    "B07K6RYVHR": "Amazon India Sony PlayStation Rs. 1000 Gift Card (B07K6RYVHR)",
 }
 ISSUE_TITLE = "[psn-stock-bot-state] Otomatik durum kaydi"
 CAPTCHA_PATTERNS = (
