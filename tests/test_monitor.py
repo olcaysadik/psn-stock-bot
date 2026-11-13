@@ -75,6 +75,12 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(self.status(availability=["In stock"], body="Other product currently unavailable"), "IN_STOCK")
         self.assertEqual(self.status(availability=[], body="Other product out of stock", purchase_enabled=False), "UNKNOWN")
 
+    def test_negated_and_future_stock_are_not_positive(self):
+        for text in ("Not available now", "May be back in stock soon", "Will be in stock next week"):
+            with self.subTest(text=text):
+                self.assertEqual(self.status(availability=[text]), "UNKNOWN")
+        self.assertEqual(self.status(availability=["Only 2 left in stock"]), "IN_STOCK")
+
     def test_original_and_short_url_identity(self):
         for asin in m.PRODUCTS:
             for url in (m.product_url(asin), m.ORIGINAL_URLS[asin]):

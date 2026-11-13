@@ -17,8 +17,8 @@ from urllib.request import Request, urlopen
 
 PRODUCTS = {
     "B07K6RYVHR": "Rs.1000 Sony PlayStation Store Gift Card (Email Delivery in 1 hour- Digital Voucher Code)",
-    "B093QF35KZ": "PlayStation Gift Card (B093QF35KZ)",
-    "B0C1H473H8": "PlayStation E-Gift Card (B0C1H473H8)",
+    "B093QF35KZ": "Rs.2000 Sony PlayStation Store Gift Card (Email Delivery in 1 hour- Digital Voucher Code)",
+    "B0C1H473H8": "Playstation | E-Gift Card | Instant Delivery | Valid for in-game purchases",
 }
 ORIGINAL_URLS = {
     "B07K6RYVHR": "https://www.amazon.in/Rs-1000-Sony-PlayStation-Delivery-Digital/dp/B07K6RYVHR",
@@ -38,7 +38,7 @@ OUT_PATTERNS = (
     "not currently available", "currently not available", "not in stock", "no longer available",
     "we don't know when or if this item will be back in stock",
 )
-IN_PATTERN = re.compile(r"\bin stock\b|\bavailable now\b", re.I)
+IN_PATTERN = re.compile(r"^\s*(?:in stock\b|available now\b|only\s+\d+\s+left in stock\b)", re.I | re.M)
 AVAILABILITY_SELECTORS = (
     "#availability", "#availabilityInsideBuyBox_feature_div", "#outOfStock",
     "#availability_feature_div", "#gc-availability", "#gcAvailability",
@@ -46,6 +46,7 @@ AVAILABILITY_SELECTORS = (
 PURCHASE_SELECTORS = (
     "#buy-now-button", "#add-to-cart-button", "#gc-buy-box-atc",
     "#gc-buy-box-buynow", "#gc-buy-box-buy-now", "input[name='submit.add-to-cart']",
+    "input[name='submit.gc-buy-now']",
 )
 
 
@@ -90,10 +91,7 @@ def classify(asin, facts):
         return "UNKNOWN", "HTTP failure or exact product identity not verified", identified, False
     availability = " ".join(facts.get("availability", [])).lower()
     out = any(term in availability for term in OUT_PATTERNS)
-    positive_availability = availability
-    for phrase in sorted(OUT_PATTERNS, key=len, reverse=True):
-        positive_availability = positive_availability.replace(phrase, "")
-    in_stock = bool(IN_PATTERN.search(positive_availability))
+    in_stock = any(IN_PATTERN.search(chunk) for chunk in facts.get("availability", []))
     purchase = bool(facts.get("purchase_enabled"))
     if out and (in_stock or purchase):
         return "UNKNOWN", "Conflicting availability and purchase signals", True, False
@@ -125,7 +123,7 @@ def inspect_page(page):
         purchase_enabled: controls.some(enabled),
         purchase_controls: controls.map(e => ({id:e.id, enabled:!!enabled(e)})),
         challenge_element: !!document.querySelector('form[action*="validateCaptcha"], #captchacharacters, input[name="cvf_captcha_input"]'),
-        gift_card_form: !!document.querySelector('#gc-buy-box, #gc-amount, #gc-customization-form')
+        gift_card_form: !!document.querySelector('#gc-buy-box, #gc-amount, #gc-customization-form, #gc-order-form-asin, #gc-order-form-type')
       };
     }""", {"availabilitySelectors": AVAILABILITY_SELECTORS, "purchaseSelectors": PURCHASE_SELECTORS})
     facts["url"] = page.url
@@ -208,6 +206,8 @@ def collect(mode, output_dir):
                                            or len({c["status"] for c in checks}) != 1):
                     latest["status"] = "BLOCKED" if any(c["status"] == "BLOCKED" for c in checks) else "UNKNOWN"
                     latest["reason"] = "Repeated short/original URL checks did not yield consistent confirmed stock"
+                    latest["identified"] = all(c["identified"] for c in checks)
+                    latest["captcha"] = any(c["captcha"] for c in checks)
                 results[asin] = latest
         finally:
             browser.close()

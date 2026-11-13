@@ -38,6 +38,8 @@ class RenderedPageTests(unittest.TestCase):
 
     def test_gift_card_form_control(self):
         self.assertEqual(self.check(self.html(button='<div id="gc-buy-box"><button id="gc-buy-box-atc">Buy</button></div>')), "IN_STOCK")
+        self.assertEqual(self.check(self.html(button='<input name="submit.gc-buy-now" type="submit" value="Buy now">')), "IN_STOCK")
+        self.assertEqual(self.check(self.html(button='<input name="submit.gc-buy-now" type="hidden" value="1">')), "UNKNOWN")
 
     def test_hidden_disabled_and_aria_disabled_controls(self):
         for attr in ('disabled', 'style="display:none"', 'aria-disabled="true"'):
