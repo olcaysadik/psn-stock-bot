@@ -1,6 +1,6 @@
 # Gerçek doğrulama kaydı — 13 Kasım 2026
 
-**Güncel durum: otomatik izleme açık, Gmail testi teslim edildi, ilk gerçek monitor çalışması başarılı.** Son üç bağımsız teşhis runner'ında 36/36 ürün kontrolü başarılı. Ek olarak gerçek monitor modunda üç ürün doğru kimlikle stokta yok olarak okundu ve kalıcı geçmiş yazıldı. Gerçek stok-var sayfası görülmediğinden stok geçiş e-postası örneklerle; SMTP teslimi ise gerçek test e-postasıyla doğrulandı.
+**Güncel durum: zamanlama açık, Gmail testi teslim edildi, iki bağımsız gerçek monitor çalışması başarılı.** Son üç bağımsız teşhis runner'ında 36/36 ürün kontrolü başarılı. İki gerçek monitor runner'ında üç ürün de stokta yok olarak okundu; aynı kalıcı geçmiş yüklenip güncellendi. Gerçek stok-var sayfası görülmediğinden stok geçiş e-postası örneklerle; SMTP teslimi ise gerçek test e-postasıyla doğrulandı. İlk `schedule` tetiklemesi 20:05 Europe/Berlin itibarıyla henüz gözlenmedi; gerçek monitor çalışmaları elle tetiklendi.
 
 ## Etkinleştirme ve ilk gerçek monitor çalışması
 
@@ -11,6 +11,9 @@
 - Kalıcı geçmiş: https://github.com/olcaysadik/psn-stock-bot/issues/1 — üç ASIN için `last_confirmed=OUT_OF_STOCK`, `notification=armed`, `failures=0` kaydedildi.
 - İlk monitor artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43487201153/artifacts/14067836950
 - Bu kontrolde stok yok olduğundan stok e-postası gönderilmedi.
+- Aynı monitor run'ı ikinci bağımsız runner'da tekrar çalıştırıldı ve başarılı oldu. Issue #1 yeniden kullanıldı; üç ürünün kontrol zamanı 19:56'dan 20:02–20:03 Europe/Berlin'e güncellendi. Üçünde de `OUT_OF_STOCK`, `armed`, `failures=0` korundu; yeni state issue'su oluşturulmadı.
+- İkinci monitor artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43487201153/artifacts/14067349927
+- Workflow'un açık olduğu GitHub arayüzündeki `Disable workflow` seçeneğiyle doğrulandı. `BOT_ENABLED=true` kaydedildi; cron `*/10 * * * *` yapılandırması geçerli. Ancak 20:00 takviminin `schedule` olayı 20:05 itibarıyla run listesinde henüz görünmedi. Bu nedenle ilk otomatik tetiklemenin çalıştığı iddia edilmez; GitHub'ın belgelenmiş zamanlama gecikmeleri geçerlidir.
 
 ## Gmail kurulumunda düzeltilen hatalar
 

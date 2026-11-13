@@ -4,6 +4,8 @@ Bu depo üç ürünü bağımsız kontrol eder. **Gerçek GitHub Actions teşhis
 
 13 Kasım 2026: **otomatik izleme açık (`BOT_ENABLED=true`)**. Gmail test mesajı gönderildi ve kullanıcı teslim aldığını doğruladı. Üç ürün de son gerçek monitor çalışmasında stokta yok olarak doğrulandı; kalıcı geçmiş [Issue #1](https://github.com/olcaysadik/psn-stock-bot/issues/1) içinde saklanıyor. Son sürümün 42 testi geçti. Kanıtlar [DIAGNOSTICS.md](DIAGNOSTICS.md) dosyasındadır.
 
+İki ayrı runner'da gerçek `monitor` çalışması ve geçmişin yeniden yüklenmesi doğrulandı. İlk otomatik `schedule` olayı 20:05 Europe/Berlin itibarıyla henüz gözlenmedi; GitHub takvimi gecikebilir. Zamanlayıcının açık olması, belirli bir dakikada çalıştığının kanıtı olarak sunulmaz.
+
 | Ürün | ASIN | Doğrudan bağlantı |
 |---|---|---|
 | ₹1.000 Sony PlayStation Store Gift Card | B07K6RYVHR | https://www.amazon.in/dp/B07K6RYVHR |
