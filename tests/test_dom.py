@@ -83,3 +83,28 @@ class RenderedPageTests(unittest.TestCase):
         self.assertTrue(result["continuation"]["attempted"])
         self.assertFalse(result["captcha"])
         self.assertEqual(counts, {"entry": 1, "product": 1})
+
+    def test_continue_home_redirect_returns_to_requested_product_once(self):
+        real_browser = self.browser
+        test_case = self
+        counts = {"target": 0, "home": 0}
+        class RoutedBrowser:
+            def new_context(self, **kwargs):
+                context = real_browser.new_context(**kwargs)
+                def route_request(route):
+                    url = m.safe_url(route.request.url)
+                    if url.rstrip('/') == 'https://www.amazon.in':
+                        counts["home"] += 1
+                        body = '<title>Amazon.in homepage</title><h1>Shopping homepage</h1>'
+                    else:
+                        counts["target"] += 1
+                        body = (test_case.html("Currently unavailable", "") if counts["target"] == 2 else
+                                '<title>Amazon.in</title><p>Click the button below to continue shopping</p><form action="/"><button>Continue shopping</button></form>')
+                    route.fulfill(status=200, content_type="text/html", body=body)
+                context.route("**/*", route_request)
+                return context
+        with tempfile.TemporaryDirectory() as directory:
+            result = m.browser_check(ASIN, RoutedBrowser(), m.product_url(ASIN), Path(directory), "fixture")
+        self.assertEqual(result["status"], "OUT_OF_STOCK")
+        self.assertTrue(result["continuation"]["returned_to_product"])
+        self.assertEqual(counts, {"target": 2, "home": 1})

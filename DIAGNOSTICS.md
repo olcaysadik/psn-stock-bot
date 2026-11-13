@@ -6,6 +6,7 @@
 
 - Run #7: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476793358 — 12 isteğin 10'u doğrulama ara ekranı, 2'si gerçek stok yok sayfası. Üç ASIN'in tamamı için tutarlılık testi başarısız (`BLOCKED`).
 - Run #8: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476960724 — 12/12 istek ara ekran. Hiçbir stok bilgisi doğrulanamadı.
+- Run #9: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43477943799 — normal devam düğmesi 11 istekte denendi, Amazon ana sayfasına gidildi; bu sayfalar doğru biçimde UNKNOWN kaldı. Sadece bir B093QF35KZ isteği doğrudan gerçek stok yok sayfasına ulaştı. Bu yüzden devam düğmesinden sonra aynı anonim oturumda hedef ürünü bir kez yeniden açma düzeltmesi eklendi. Üç ürün için tutarlı stok bilgisi bu çalışmada da doğrulanmadı.
 - Run #7 artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476793358/artifacts/14062937468
 
 Ekran görüntüsü, başlık `Amazon.in`, ürün başlığı yok ve `Click the button below to continue shopping` mesajını gösterir. Bu, ürün stok bilgisi değildir. Bu ekran tek başına görsel CAPTCHA kanıtı da değildir; önceki sürüm bunu ortak CAPTCHA/verification bayrağında raporluyordu. Yeni sürüm normal ara ekranı ayrı kaydeder, gerçek CAPTCHA alanı/görseli varsa müdahale etmez. IP itibarı, oturum ve bölge etkileri bu örneklerden tek başına kesin ayrıştırılamaz; sorun gerçek sayfa doğrulamasının yanlış reddi değildir çünkü dönen ekran ürün sayfası değildir.

@@ -171,6 +171,14 @@ def browser_check(asin, browser, target, output_dir, label):
                 with page.expect_navigation(wait_until="domcontentloaded", timeout=25000) as navigation:
                     button.click(timeout=5000)
                 continued_response = navigation.value
+                landing = urlsplit(page.url)
+                if (landing.scheme == "https" and landing.hostname in {"amazon.in", "www.amazon.in"}
+                        and landing.path in {"", "/"}):
+                    # Amazon's ordinary Continue shopping form can discard the
+                    # product path. Restore it once, keeping this anonymous session.
+                    continuation["home_url"] = safe_url(page.url)
+                    continuation["returned_to_product"] = True
+                    continued_response = page.goto(target, wait_until="domcontentloaded", timeout=35000)
                 facts["http"] = continued_response.status if continued_response else 0
                 try:
                     page.locator("#productTitle, #captchacharacters, #gc-title, #availability").first.wait_for(timeout=5000)

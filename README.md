@@ -77,7 +77,7 @@ Sınıflandırma, CAPTCHA, ASIN/host kontrolü, yanlış pozitifler, stok geçi�
 
 ## Amazon erişimi engellenirse
 
-Normal `Continue shopping` ara ekranında yalnızca o düğme bir kez izlenir ve ürün/ASIN/stok yeniden doğrulanır. Önceki ara ekranın görüntüsü ve geçiş bilgisi raporda saklanır. CAPTCHA alanı/görseli veya robot doğrulama metni varsa düğmeye basılmaz. Devam sayfası tekrar gelirse `BLOCKED` kalır; döngü, CAPTCHA çözümü veya gizleme tekniği kullanılmaz.
+Normal `Continue shopping` ara ekranında yalnızca o düğme bir kez izlenir. Amazon ana sayfasına gidilirse aynı anonim oturumda hedef ürün bir kez yeniden açılır; ürün/ASIN/stok yeniden doğrulanır. Önceki ara ekranın görüntüsü ve geçiş bilgisi raporda saklanır. CAPTCHA alanı/görseli veya robot doğrulama metni varsa düğmeye basılmaz. Devam sayfası tekrar gelirse `BLOCKED` kalır; döngü, CAPTCHA çözümü veya gizleme tekniği kullanılmaz.
 
 Önce Actions artifact ekran görüntülerini ve `report.json` içindeki denemeleri karşılaştırın. Yalnızca başlığın `Amazon.in` olması CAPTCHA kanıtı değildir; doğrulama metni/alanı ayrıca kaydedilir. Kısa URL'nin özgün URL'den daha iyi olduğu varsayılmaz. Tek bir başarılı sayfa, bütün ürünler için sürekli erişim anlamına gelmez.
 
