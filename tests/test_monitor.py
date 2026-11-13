@@ -239,3 +239,68 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(workflow["jobs"]["watch"]["needs"], "validate")
         artifact = workflow["jobs"]["watch"]["steps"][-1]
         self.assertIn("always()", artifact["if"])
+
+
+@patch.dict(os.environ, {"SMTP_USER": "sender@example.com", "ALERT_EMAIL": "recipient@example.com",
+                        "SMTP_APP_PASSWORD": "abcd efgh ijkl mnop"}, clear=True)
+class GmailTests(unittest.TestCase):
+    def setUp(self):
+        context = patch.object(m.ssl, "create_default_context", return_value=object())
+        context.start()
+        self.addCleanup(context.stop)
+
+    def client(self):
+        client = Mock()
+        client.ehlo.return_value = (250, b"safe greeting")
+        client.send_message.return_value = {}
+        return client
+
+    def test_password_spaces_are_normalized(self):
+        self.assertEqual(m.smtp_settings()["SMTP_APP_PASSWORD"], "abcdefghijklmnop")
+
+    def test_invalid_settings_fail_without_disclosing_values(self):
+        for field, value in (("SMTP_USER", "private bad address"), ("SMTP_APP_PASSWORD", "private-wrong-password")):
+            with patch.dict(os.environ, {field: value}):
+                with self.assertRaises(RuntimeError) as raised:
+                    m.smtp_settings()
+                self.assertIn(field, str(raised.exception))
+                self.assertNotIn(value, str(raised.exception))
+
+    def test_tls_delivery_is_accepted_once(self):
+        client = self.client()
+        with patch.object(m.smtplib, "SMTP_SSL", return_value=client), patch.object(m.smtplib, "SMTP") as fallback:
+            m.send_gmail("Test", "Body")
+        client.login.assert_called_once_with("sender@example.com", "abcdefghijklmnop")
+        client.send_message.assert_called_once()
+        client.close.assert_called_once()
+        fallback.assert_not_called()
+
+    def test_connection_failure_can_use_starttls_before_submission(self):
+        client = self.client()
+        with patch.object(m.smtplib, "SMTP_SSL", side_effect=m.smtplib.SMTPServerDisconnected()), \
+                patch.object(m.smtplib, "SMTP", return_value=client):
+            m.send_gmail("Test", "Body")
+        self.assertEqual(client.ehlo.call_count, 2)
+        client.starttls.assert_called_once()
+        self.assertLess([c[0] for c in client.method_calls].index("starttls"),
+                        [c[0] for c in client.method_calls].index("login"))
+        client.send_message.assert_called_once()
+
+    def test_authentication_failure_is_safe_and_not_retried(self):
+        client = self.client()
+        client.login.side_effect = m.smtplib.SMTPAuthenticationError(535, b"private account details")
+        with patch.object(m.smtplib, "SMTP_SSL", return_value=client), patch.object(m.smtplib, "SMTP") as fallback:
+            with self.assertRaisesRegex(RuntimeError, "authenticate.*code 535") as raised:
+                m.send_gmail("Test", "Body")
+        self.assertNotIn("private account details", str(raised.exception))
+        fallback.assert_not_called()
+        client.send_message.assert_not_called()
+
+    def test_ambiguous_delivery_never_uses_another_transport(self):
+        client = self.client()
+        client.send_message.side_effect = m.smtplib.SMTPServerDisconnected("private reply")
+        with patch.object(m.smtplib, "SMTP_SSL", return_value=client), patch.object(m.smtplib, "SMTP") as fallback:
+            with self.assertRaisesRegex(RuntimeError, "SMTP send failed"):
+                m.send_gmail("Test", "Body")
+        client.send_message.assert_called_once()
+        fallback.assert_not_called()

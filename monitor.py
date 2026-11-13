@@ -349,6 +349,12 @@ def smtp_settings():
     missing = [name for name, value in settings.items() if not value]
     if missing:
         raise RuntimeError("Missing GitHub Actions secrets: " + ", ".join(missing))
+    for name in ("SMTP_USER", "ALERT_EMAIL"):
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", settings[name]):
+            raise RuntimeError(name + " must contain one complete email address")
+    settings["SMTP_APP_PASSWORD"] = re.sub(r"\s+", "", settings["SMTP_APP_PASSWORD"])
+    if not re.fullmatch(r"[A-Za-z0-9]{16}", settings["SMTP_APP_PASSWORD"]):
+        raise RuntimeError("SMTP_APP_PASSWORD must be a 16-character Google app password (spaces are ignored)")
     return settings
 
 
@@ -357,10 +363,49 @@ def send_gmail(subject, message):
     mail = EmailMessage()
     mail["From"], mail["To"], mail["Subject"] = settings["SMTP_USER"], settings["ALERT_EMAIL"], subject
     mail.set_content(message)
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context(), timeout=25) as smtp:
-        smtp.login(settings["SMTP_USER"], settings["SMTP_APP_PASSWORD"].replace(" ", ""))
-        if smtp.send_message(mail):
-            raise RuntimeError("SMTP recipient not accepted")
+    tls = ssl.create_default_context()
+    for port in (465, 587):
+        smtp = None
+        stage = "connect"
+        delivery_started = False
+        try:
+            if port == 465:
+                smtp = smtplib.SMTP_SSL("smtp.gmail.com", port, context=tls, timeout=25)
+            else:
+                smtp = smtplib.SMTP("smtp.gmail.com", port, timeout=25)
+            stage = "ehlo"
+            code, _ = smtp.ehlo()
+            if code != 250:
+                raise smtplib.SMTPHeloError(code, b"EHLO rejected")
+            if port == 587:
+                stage = "starttls"
+                smtp.starttls(context=tls)
+                stage = "ehlo_after_tls"
+                code, _ = smtp.ehlo()
+                if code != 250:
+                    raise smtplib.SMTPHeloError(code, b"EHLO rejected")
+            stage = "authenticate"
+            smtp.login(settings["SMTP_USER"], settings["SMTP_APP_PASSWORD"])
+            stage = "send"
+            delivery_started = True
+            if smtp.send_message(mail):
+                raise RuntimeError("SMTP recipient not accepted")
+            print(f"SMTP_ACCEPTED port={port}; server accepted the message", flush=True)
+            return
+        except Exception as exc:
+            code = getattr(exc, "smtp_code", None)
+            detail = f"SMTP {stage} failed on port {port}: {type(exc).__name__}"
+            if isinstance(code, int):
+                detail += f" (code {code})"
+            # Never log SMTP reply text: it can contain account addresses or tokens.
+            print(detail, flush=True)
+            if (delivery_started or port == 587 or isinstance(exc, smtplib.SMTPAuthenticationError) or
+                    not isinstance(exc, (smtplib.SMTPServerDisconnected, OSError, TimeoutError))):
+                raise RuntimeError(detail) from None
+            print("Trying Gmail STARTTLS port 587 before any message submission", flush=True)
+        finally:
+            if smtp is not None:
+                smtp.close()
 
 
 def process_results(results, state, save, send):
