@@ -2,7 +2,7 @@
 
 Bu depo üç ürünü bağımsız kontrol eder. **Gerçek GitHub Actions teşhisi doğrulanmadan otomatik izlemeyi açmayın.** Kod testlerinin geçmesi Amazon'a erişilebildiği anlamına gelmez. Ücretli servis, proxy veya CAPTCHA çözücü kullanılmaz.
 
-13 Kasım 2026 son sürüm doğrulaması: iki bağımsız GitHub runner denemesinde 24/24 gerçek ürün kontrolü başarılı, üç ürün de stokta yok. Gmail secret'ları eksik olduğundan otomatik izleme kapalıdır. Kanıtlar ve kurulumda kalan işlemler [DIAGNOSTICS.md](DIAGNOSTICS.md) dosyasındadır.
+13 Kasım 2026 doğrulaması: son üç bağımsız GitHub runner denemesinde 36/36 gerçek ürün kontrolü başarılı, üç ürün de stokta yok. Secret'lar eklendi; son Gmail testi uygulama şifresi biçimi geçersiz olduğu için gönderimden önce durdu. Gmail testi tamamlanana kadar otomatik izleme kapalıdır. Kanıtlar [DIAGNOSTICS.md](DIAGNOSTICS.md) dosyasındadır.
 
 | Ürün | ASIN | Doğrudan bağlantı |
 |---|---|---|
@@ -33,6 +33,8 @@ E-postada Amazon'dan gerçekten okunan ürün başlığı kullanılır. İkinci/
 | `ALERT_EMAIL` | `osadik1995@gmail.com` |
 
 Uygulama şifresini [Google hesabından](https://myaccount.google.com/apppasswords) oluşturun. [Google koşulları](https://support.google.com/accounts/answer/185833) geçerlidir; iki adımlı doğrulama gerekir, bazı hesaplarda seçenek bulunmayabilir. Şifreyi koda, issue'ya veya sohbete yazmayın. `test` modunu çalıştırın. Eksik secret adları hata mesajında gösterilir; değerleri gösterilmez.
+
+Google uygulama şifresi 16 karakterdir; kopyalanan boşluklar otomatik ayıklanır. Biçim doğrulanmadan SMTP bağlantısı kurulmaz. Önce 465 üzerinde TLS kullanılır; mesaj gönderimi başlamadan bağlantı kesilirse 587 üzerinde zorunlu STARTTLS denenebilir. Kimlik doğrulama reddi veya mesaj gönderimi başladıktan sonraki bir hata otomatik tekrar gönderim üretmez. Teşhis yalnızca aşama, port, hata türü ve varsa sayısal SMTP kodunu kaydeder; sunucu yanıtı ve secret değerleri yazılmaz.
 
 ## Otomatik çalışma kapısı
 
