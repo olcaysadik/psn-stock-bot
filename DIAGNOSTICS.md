@@ -1,6 +1,24 @@
 # Gerçek doğrulama kaydı — 13 Kasım 2026
 
-**Güncel durum: kısmen çalışır; otomatik izleme kapalı.** İlk başarılı teşhis sonraki bağımsız runner'larda tekrarlanamadı. Sonraki kontroller Amazon'un `Continue shopping` ara sayfasını gösterdi. Normal devam düğmesini bir kez izleyip gerçek ürün kimliğini yeniden doğrulayan düzeltmenin bulut testi ayrıca yapılmaktadır. Gmail kimlik bilgileri de eksiktir.
+**Güncel durum: kod ve gerçek bulut stok okuması doğrulandı; Gmail kurulumu eksik, otomatik izleme kapalı.** Son düzeltme iki bağımsız runner denemesinde toplam 24/24 gerçek ürün kontrolünden geçti. Tam uçtan uca stok e-postası ve canlı monitor geçmiş döngüsü, Gmail kimlik bilgileri eksik olduğu için tamamlanmadı.
+
+## Son sürümün gerçek doğrulaması
+
+- Kod commit'i: https://github.com/olcaysadik/psn-stock-bot/commit/97c50020b054a79a1597938c16a1d27bf7027fe4
+- Son workflow ve iki bağımsız denemesi: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43478951226
+- Deneme 1 artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43478951226/artifacts/14064865589
+- Deneme 2 artifact: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43478951226/artifacts/14064074208
+- Gerçek ürün kontrolleri yaklaşık 19:05–19:10 Europe/Berlin (18:05–18:10 UTC) arasında yapıldı.
+
+| ASIN | Deneme 1 | Deneme 2 | Gerçek sonuç | HTTP | Ürün kimliği | Görsel CAPTCHA |
+|---|---|---|---|---|---|---|
+| B07K6RYVHR | 4/4 | 4/4 | OUT_OF_STOCK | 200 | Doğru | Yok |
+| B093QF35KZ | 4/4 | 4/4 | OUT_OF_STOCK | 200 | Doğru | Yok |
+| B0C1H473H8 | 4/4 | 4/4 | OUT_OF_STOCK | 200 | Doğru | Yok |
+
+Normal devam düğmesi çoğu istekte Amazon ana sayfasını açtı. Aynı anonim oturumda hedef ürün URL'si bir kez yeniden açılınca gerçek ürün başlığı, tam ASIN ve açık `Currently unavailable` alanları okundu. Son sürümde ilk denemenin 12/12, ikinci denemenin 9/12 isteği bu normal gezinme yolunu kullandı; diğerleri doğrudan ürün sayfasıydı. Kısa ve özgün başlıklı URL'ler iki denemenin ikişer turunda da aynı doğrulanmış sonucu verdi.
+
+Bu, gözlenen ara ekran sorunu için gerçek bir iyileşmedir; görsel CAPTCHA çözülmedi, oturum/cookie dosyası kaydedilmedi, proxy veya ücretli servis kullanılmadı. Gelecekte farklı engel gelirse güvenilir stok tahmin edilmez; `BLOCKED`/`UNKNOWN` olarak kalır. Süresiz erişim garantisi verilmez. Gerçek IN_STOCK sayfası bu oturumda görülmedi; olumlu stok sınıflandırması örnek sayfalarla test edildi.
 
 ## Bağımsız tekrar testleri
 
@@ -41,8 +59,8 @@ E-hediye kartında ayrıca alıcı e-postası/mesaj alanları ve `gc-order-form-
 ## Test ve kurulum durumu
 
 - Python 3.12 sözdizimi, bağımlılık kurulumu ve `pip check` başarılı.
-- Yerelde ilk sürümde 32 test geçti; son güvenlik düzeltmesiyle 33 test geçti (6'sı gerçek Chromium'da çevrimdışı HTML testidir).
-- İlk GitHub run'ında 26 birim testi ve ayrıca 6 Chromium testi geçti; gerçek teşhis de geçti.
+- Son sürümde yerelde 36 test geçti; 8'i gerçek Chromium'da çevrimdışı HTML testidir. Bu örnek testler Amazon erişim testi değildir.
+- Son GitHub denemelerinde 28 birim testi ve ayrıca 8 Chromium testi geçti; iki gerçek teşhis de 12/12 ürün kontrolünden geçti.
 - YAML ayrıştırması ve yapı testleri geçti; yerelde actionlint 1.7.12 hata vermedi.
 - Kalıcı geçmişin yeniden yüklenmesi, UNKNOWN/BLOCKED sonrası tekrar bildirim olmaması, doğrulanmış stok yok→stok var geçişi, SMTP belirsizliği ve gönderim sonrası kayıt hatası örneklerle test edildi. Canlı SMTP olmadan uçtan uca gerçek stok e-postası ve gerçek monitor geçmiş döngüsü tamamlanmış sayılmaz.
 - Gmail test modu GitHub'da gerçekten çalıştırıldı: https://github.com/olcaysadik/psn-stock-bot/actions/runs/43476159047
@@ -54,6 +72,6 @@ E-hediye kartında ayrıca alıcı e-postası/mesaj alanları ve `gc-order-form-
 
 1. Repo Actions secret'larına `SMTP_USER` ve o hesabın `SMTP_APP_PASSWORD` değerini ekleyin. Şifreyi sohbet veya depoya düz metin olarak yazmayın.
 2. Workflow'u `test` modunda çalıştırıp test e-postasını alın.
-3. Yeniden `diagnose` çalıştırın; üç ürün de doğrulanmışsa `BOT_ENABLED=true` repository variable'ını ekleyin ve `monitor` çalıştırın. Bundan sonra yaklaşık 10 dakikada bir bulutta çalışır.
+3. Gmail testi teslim alındıktan sonra `BOT_ENABLED=true` repository variable'ını ekleyin ve `monitor` çalıştırın. İlk monitor çalışması kalıcı state issue'sunu oluşturur. Bundan sonra yaklaşık 10 dakikada bir bulutta çalışır; GitHub zamanlama gecikmeleri ve 60 günlük hareketsizlik sınırı README'de açıklanmıştır.
 
 Resmi API ve ücretsiz kaynak araştırmasının sonucu README'dedir: Creators API uygunluk/kimlik bilgisi ister; Keepa API aboneliklidir. Bu üç ASIN için ücretsiz, 10 dakikalık güncel ve doğrulanmış alternatif stok akışı bulunmadığından fiyat geçmişi stok kaynağı olarak kullanılmadı.

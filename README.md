@@ -2,6 +2,8 @@
 
 Bu depo üç ürünü bağımsız kontrol eder. **Gerçek GitHub Actions teşhisi doğrulanmadan otomatik izlemeyi açmayın.** Kod testlerinin geçmesi Amazon'a erişilebildiği anlamına gelmez. Ücretli servis, proxy veya CAPTCHA çözücü kullanılmaz.
 
+13 Kasım 2026 son sürüm doğrulaması: iki bağımsız GitHub runner denemesinde 24/24 gerçek ürün kontrolü başarılı, üç ürün de stokta yok. Gmail secret'ları eksik olduğundan otomatik izleme kapalıdır. Kanıtlar ve kurulumda kalan işlemler [DIAGNOSTICS.md](DIAGNOSTICS.md) dosyasındadır.
+
 | Ürün | ASIN | Doğrudan bağlantı |
 |---|---|---|
 | ₹1.000 Sony PlayStation Store Gift Card | B07K6RYVHR | https://www.amazon.in/dp/B07K6RYVHR |
