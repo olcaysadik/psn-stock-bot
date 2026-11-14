@@ -2,9 +2,9 @@
 
 Bu depo üç ürünü bağımsız kontrol eder. **Gerçek GitHub Actions teşhisi doğrulanmadan otomatik izlemeyi açmayın.** Kod testlerinin geçmesi Amazon'a erişilebildiği anlamına gelmez. Ücretli servis, proxy veya CAPTCHA çözücü kullanılmaz.
 
-13 Kasım 2026: **otomatik izleme açık (`BOT_ENABLED=true`)**. Gmail test mesajı gönderildi ve kullanıcı teslim aldığını doğruladı. Üç ürün de son gerçek monitor çalışmasında stokta yok olarak doğrulandı; kalıcı geçmiş [Issue #1](https://github.com/olcaysadik/psn-stock-bot/issues/1) içinde saklanıyor. Son sürümün 42 testi geçti. Kanıtlar [DIAGNOSTICS.md](DIAGNOSTICS.md) dosyasındadır.
+14 Kasım 2026: **gerçek otomatik çalışma doğrulandı**. Özel Google Apps Script projesindeki 10 dakikalık zamanlayıcı, GitHub'daki mevcut stok botunu başlatır. [İlk zaman tabanlı kontrol](https://github.com/olcaysadik/psn-stock-bot/actions/runs/43533803876) başarılı; üç ürün de 01:25 Europe/Berlin'de stokta yok olarak doğrulandı. Gmail test mesajını kullanıcı daha önce teslim aldı. Kalıcı geçmiş [Issue #1](https://github.com/olcaysadik/psn-stock-bot/issues/1) içinde saklanır.
 
-İki ayrı runner'da gerçek `monitor` çalışması ve geçmişin yeniden yüklenmesi doğrulandı. İlk otomatik `schedule` olayı 20:05 Europe/Berlin itibarıyla henüz gözlenmedi; GitHub takvimi gecikebilir. Zamanlayıcının açık olması, belirli bir dakikada çalıştığının kanıtı olarak sunulmaz.
+Google yürütme kaydında `Zaman Odaklı` ve `source=time_trigger` görüldü; eşleşen GitHub run'ı ve geçmiş güncellemesi doğrulandı. GitHub'ın kendi cron'u önceki bekleme ve yeniden etkinleştirme denemelerinde run üretmediği için bağımsız Google zamanlayıcısı kuruldu. Bu kaynaktan gelen GitHub olayı `workflow_dispatch` olarak görünür. Son sürümde 34 birim + 10 Chromium testi ve zamanlayıcının 8 yerel testi geçti. Kanıtlar [DIAGNOSTICS.md](DIAGNOSTICS.md), zamanlayıcı kaynak/bakım bilgisi [scheduler/google/README.md](scheduler/google/README.md) içindedir.
 
 | Ürün | ASIN | Doğrudan bağlantı |
 |---|---|---|
@@ -44,7 +44,9 @@ Google uygulama şifresi 16 karakterdir; kopyalanan boşluklar otomatik ayıklan
 
 Erişim doğrulandıktan ve Gmail testi teslim alındıktan sonra [Repository variables](https://github.com/olcaysadik/psn-stock-bot/settings/variables/actions) içinde **`BOT_ENABLED` = `true`** ayarlayın. Bu değer yokken veya `false` iken planlı işin tarayıcısı çalışmaz; elle `monitor` da engellenir. Durdurmak için değişkeni `false` yapın.
 
-Cron: **`*/10 * * * *`**, yaklaşık 10 dakikada bir. Bilgisayarın açık olması gerekmez. [GitHub zamanlayıcısı](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule) gecikebilir veya yoğunlukta işleri düşürebilir; kesintisiz zaman garantisi vermez. Public depolarda 60 gün depo etkinliği olmazsa zamanlama kapatılabilir. Gerektiğinde GitHub'dan tekrar etkinleştirin.
+Etkin bağımsız zamanlayıcı: **Google Apps Script, yaklaşık 10 dakikada bir**. Kullanıcının bilgisayarının açık olması gerekmez. Özel projede yalnızca bu depo için Actions yazma izni olan süreli anahtar Script Properties'te saklanır; kaynak koduna veya bu depoya konulmaz. Anahtar sona ermeden yenilenmelidir. Kurulum, güvenli durum kontrolü ve durdurma adımları [zamanlayıcı kılavuzundadır](scheduler/google/README.md).
+
+GitHub cron yapılandırması `*/10 * * * *` olarak korunur. [GitHub zamanlayıcısı](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule) gecikebilir, işleri düşürebilir veya public depoda 60 günlük hareketsizlik sonrası kapanabilir. Google tetikleyicisi de kesin dakika garantisi vermez. İki kaynak birlikte tetiklerse workflow concurrency ve kalıcı bildirim geçmişi sıraya almayı/tekrar önlemeyi sürdürür.
 
 Standart Ubuntu runner ve public depo kullanılır. [GitHub Actions ücretlendirmesi](https://docs.github.com/en/billing/concepts/product-billing/github-actions) uyarınca public depolardaki standart runner kullanımı ücretsizdir. Artifact'lar yalnızca üç gün saklanır; ücretli/larger runner veya harici ücretli servis eklenmez. Depoyu private yapmak ücretsiz dakika bütçesini değiştirebilir.
 

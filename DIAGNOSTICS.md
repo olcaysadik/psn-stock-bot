@@ -1,3 +1,36 @@
+# Gerçek otomatik çalışma — 14 Kasım 2026
+
+**Durum: Google'ın 10 dakikalık zamanlayıcısı kuruldu ve ilk gerçek otomatik stok kontrolü başarılı.**
+
+- Özel `PSN GitHub Scheduler` projesi paylaşıma veya web uygulaması olarak yayına açılmadı. Kullanıcı yalnızca bu depo için Actions read/write ve zorunlu Metadata read-only izinli anahtarı oluşturup Script Properties'e girdi; değer okunmadı/loglanmadı. Google erişim onayını kullanıcı tamamladı.
+- Kurulum 01:16:14–01:16:17 Europe/Berlin'de tamamlandı. API HTTP 200 döndürdü ve tek 10 dakikalık `dispatchPsnMonitor` clock tetikleyicisi oluşturuldu.
+- Google yürütme tablosunda **Zaman Odaklı**, `dispatchPsnMonitor`, başlangıç **01:22:55**, süre 2.472 saniye ve **Tamamlandı** görüldü.
+- Aynı yürütmenin güvenli logu: `source=time_trigger`, `http=200`, UTC `2026-11-14T00:22:57.632Z`; eşleşen [GitHub run 43533803876](https://github.com/olcaysadik/psn-stock-bot/actions/runs/43533803876) başarılı.
+- GitHub olayı `workflow_dispatch` olsa da tetikleyicinin otomatik olduğu Google'ın **Zaman Odaklı** kaydı ve eşleşen run kimliğiyle doğrulandı. Elle kurulum testi otomatik çalışma kanıtı olarak kullanılmadı.
+- [Otomatik kontrol artifact'ı](https://github.com/olcaysadik/psn-stock-bot/actions/runs/43533803876/artifacts/14089395765); üç ürün için gerçek HTTP 200, doğru ASIN, doğru ürün başlığı, açık stok yok bilgisi; CAPTCHA görülmedi.
+- [Issue #1](https://github.com/olcaysadik/psn-stock-bot/issues/1) 01:25:43 Europe/Berlin'de güncellendi; üç ürün için `OUT_OF_STOCK`, `armed`, `failures=0`. Stok yok olduğundan e-posta gönderilmedi. Daha önce gerçek Gmail testinin teslimi kullanıcı tarafından doğrulandı.
+
+| ASIN | Otomatik kontrol zamanı (Europe/Berlin) | Sonuç | HTTP |
+|---|---|---|---|
+| B07K6RYVHR | 01:25:27 | OUT_OF_STOCK | 200 |
+| B093QF35KZ | 01:25:38 | OUT_OF_STOCK | 200 |
+| B0C1H473H8 | 01:25:41 | OUT_OF_STOCK | 200 |
+
+## Kurulum sırasında bulunan HTTP kaydı sorunu
+
+İlk Google kurulum isteği [43533042948](https://github.com/olcaysadik/psn-stock-bot/actions/runs/43533042948) GitHub'a ulaştı; ancak normal Amazon gezinmesinden sonra ürün DOM'u görünürken navigation dönüşü boş olduğunda HTTP 0 yazılıyordu. İki ürün UNKNOWN kaldı, geçmişteki doğrulanmış stok bilgisi korundu ve e-posta gönderilmedi.
+
+[8afd279717593ca16646971ecc55edeb7b4021bb](https://github.com/olcaysadik/psn-stock-bot/commit/8afd279717593ca16646971ecc55edeb7b4021bb) ile HTTP, tarayıcının gerçekten gözlediği **ana belge** yanıtından alınır ve son URL ile eşleştirilir. Başlık/DOM'dan 200 tahmini yapılmaz; alt çerçeve veya alt kaynak yanıtı ana belgenin HTTP kodunu değiştiremez. Eksik navigation dönüşü ve ana belgesi 503 iken alt çerçevesi 200 olan sayfa için iki Chromium testi eklendi.
+
+- GitHub'da 34 birim + 10 Chromium testi başarılı (44 toplam); Google zamanlayıcısının 8 Node testi de geçti.
+- [Düzeltme sonrası gerçek teşhis](https://github.com/olcaysadik/psn-stock-bot/actions/runs/43533619772): kısa ve özgün URL'lerle iki turda **12/12 OUT_OF_STOCK**, HTTP 200, doğru kimlik ve CAPTCHA yok.
+- [Teşhis artifact'ı](https://github.com/olcaysadik/psn-stock-bot/actions/runs/43533619772/artifacts/14088572343).
+- Ardından yukarıdaki gerçek zaman tabanlı monitor, yeni commit üzerinde başarılı oldu ve kalıcı geçmiş güncellendi.
+
+Zamanlayıcı kaynakları ve bakım adımları [scheduler/google/README.md](scheduler/google/README.md) içindedir. Ücretli servis eklenmedi. Google anahtarı sona ermeden yenilenmelidir. Gerçek IN_STOCK sayfası bu doğrulamada görülmedi; olumlu stok/e-posta geçişleri örnek testlerle, SMTP teslimi ise gerçek test e-postasıyla doğrulandı.
+
+---
+
 # Gerçek doğrulama kaydı — 13 Kasım 2026
 
 **Güncel durum: zamanlama açık, Gmail testi teslim edildi, iki bağımsız gerçek monitor çalışması başarılı.** Son üç bağımsız teşhis runner'ında 36/36 ürün kontrolü başarılı. İki gerçek monitor runner'ında üç ürün de stokta yok olarak okundu; aynı kalıcı geçmiş yüklenip güncellendi. Gerçek stok-var sayfası görülmediğinden stok geçiş e-postası örneklerle; SMTP teslimi ise gerçek test e-postasıyla doğrulandı. İlk `schedule` tetiklemesi 20:05 Europe/Berlin itibarıyla henüz gözlenmedi; gerçek monitor çalışmaları elle tetiklendi.
