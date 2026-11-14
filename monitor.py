@@ -141,6 +141,16 @@ def browser_check(asin, browser, target, output_dir, label):
     context = browser.new_context(locale="en-IN", timezone_id="Asia/Kolkata", viewport={"width": 1365, "height": 1000})
     page = context.new_page()
     page.set_default_timeout(5000)
+    document_responses = []
+
+    def remember_document_response(response):
+        # goto/expect_navigation may return None for a same-document navigation
+        # racing Amazon's normal redirect. Observe the actual main document HTTP
+        # response instead; images, AJAX and child frames cannot supply its status.
+        if response.frame == page.main_frame and response.request.is_navigation_request():
+            document_responses[:] = [response]
+
+    page.on("response", remember_document_response)
     facts = {"http": 0, "url": target, "title": "", "heading": "", "availability": [], "page_asins": []}
     error = None
     continuation = {"attempted": False}
@@ -193,6 +203,14 @@ def browser_check(asin, browser, target, output_dir, label):
             facts.update(inspect_page(page))
         except Exception:
             pass
+    # Associate HTTP evidence with the document actually being inspected. Never
+    # infer 200 from a heading, availability text, an earlier page or a subresource.
+    latest_document = document_responses[-1] if document_responses else None
+    if latest_document and latest_document.url.split("#", 1)[0] == page.url.split("#", 1)[0]:
+        facts["http"] = latest_document.status
+        facts["http_source"] = "observed_main_document_response"
+    else:
+        facts["http"] = 0
     status, reason, identified, captcha = classify(asin, facts)
     if error:
         status, reason = "UNKNOWN", f"Navigation/inspection failed: {error}"

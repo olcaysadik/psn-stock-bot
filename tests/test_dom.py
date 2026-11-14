@@ -108,3 +108,47 @@ class RenderedPageTests(unittest.TestCase):
         self.assertEqual(result["status"], "OUT_OF_STOCK")
         self.assertTrue(result["continuation"]["returned_to_product"])
         self.assertEqual(counts, {"target": 2, "home": 1})
+
+    def test_missing_goto_return_uses_observed_main_document_http(self):
+        real_browser = self.browser
+        test_case = self
+        class PageWithMissingNavigationReturn:
+            def __init__(self, page):
+                self.page = page
+            def __getattr__(self, name):
+                return getattr(self.page, name)
+            def goto(self, *args, **kwargs):
+                self.page.goto(*args, **kwargs)
+                # Same-document navigation can omit this convenience return even
+                # though the browser has observed the real document response.
+                return None
+        class RoutedBrowser:
+            def new_context(self, **kwargs):
+                context = real_browser.new_context(**kwargs)
+                context.route("**/*", lambda route: route.fulfill(
+                    status=200, content_type="text/html", body=test_case.html("Currently unavailable", "")))
+                original_new_page = context.new_page
+                context.new_page = lambda: PageWithMissingNavigationReturn(original_new_page())
+                return context
+        with tempfile.TemporaryDirectory() as directory:
+            result = m.browser_check(ASIN, RoutedBrowser(), m.product_url(ASIN), Path(directory), "missing-return")
+        self.assertEqual(result["http"], 200)
+        self.assertEqual(result["status"], "OUT_OF_STOCK")
+        self.assertEqual(result["http_source"], "observed_main_document_response")
+
+    def test_successful_child_frame_cannot_replace_failed_main_document_http(self):
+        real_browser = self.browser
+        test_case = self
+        class RoutedBrowser:
+            def new_context(self, **kwargs):
+                context = real_browser.new_context(**kwargs)
+                def route_request(route):
+                    child = route.request.url.endswith('/child')
+                    body = '<h1>Child frame</h1>' if child else test_case.html() + '<iframe src="/child"></iframe>'
+                    route.fulfill(status=200 if child else 503, content_type="text/html", body=body)
+                context.route("**/*", route_request)
+                return context
+        with tempfile.TemporaryDirectory() as directory:
+            result = m.browser_check(ASIN, RoutedBrowser(), m.product_url(ASIN), Path(directory), "failed-main")
+        self.assertEqual(result["http"], 503)
+        self.assertEqual(result["status"], "BLOCKED")
