@@ -30,10 +30,10 @@ function installPsnScheduler() {
     throw new Error('Multiple PSN clock triggers found; remove duplicates in Triggers first');
   }
   if (triggers.length === 0) {
-    ScriptApp.newTrigger(PSN_HANDLER).timeBased().everyMinutes(10).create();
+    ScriptApp.newTrigger(PSN_HANDLER).timeBased().everyMinutes(5).create();
   }
   PropertiesService.getScriptProperties().setProperty('SCHEDULER_ENABLED', 'true');
-  console.log('PSN Google clock installed: every 10 minutes');
+  console.log('PSN Google clock installed: every 5 minutes');
   return result;
 }
 

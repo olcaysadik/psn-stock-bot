@@ -2,6 +2,8 @@
 
 Bu depo üç ürünü bağımsız kontrol eder. **Gerçek GitHub Actions teşhisi doğrulanmadan otomatik izlemeyi açmayın.** Kod testlerinin geçmesi Amazon'a erişilebildiği anlamına gelmez. Ücretli servis, proxy veya CAPTCHA çözücü kullanılmaz.
 
+16 Kasım 2026: **kontrol aralığı 5 dakikaya indirildi**. Google clock ve GitHub cron aynı aralığa ayarlandı. Günlük Google tetikleme sayısı yaklaşık 288'dir.
+
 14 Kasım 2026: **gerçek otomatik çalışma doğrulandı**. Özel Google Apps Script projesindeki 10 dakikalık zamanlayıcı, GitHub'daki mevcut stok botunu başlatır. [İlk zaman tabanlı kontrol](https://github.com/olcaysadik/psn-stock-bot/actions/runs/43533803876) başarılı; üç ürün de 01:25 Europe/Berlin'de stokta yok olarak doğrulandı. Gmail test mesajını kullanıcı daha önce teslim aldı. Kalıcı geçmiş [Issue #1](https://github.com/olcaysadik/psn-stock-bot/issues/1) içinde saklanır.
 
 Google yürütme kaydında `Zaman Odaklı` ve `source=time_trigger` görüldü; eşleşen GitHub run'ı ve geçmiş güncellemesi doğrulandı. GitHub'ın kendi cron'u önceki bekleme ve yeniden etkinleştirme denemelerinde run üretmediği için bağımsız Google zamanlayıcısı kuruldu. Bu kaynaktan gelen GitHub olayı `workflow_dispatch` olarak görünür. Son sürümde 34 birim + 10 Chromium testi ve zamanlayıcının 8 yerel testi geçti. Kanıtlar [DIAGNOSTICS.md](DIAGNOSTICS.md), zamanlayıcı kaynak/bakım bilgisi [scheduler/google/README.md](scheduler/google/README.md) içindedir.
@@ -44,9 +46,9 @@ Google uygulama şifresi 16 karakterdir; kopyalanan boşluklar otomatik ayıklan
 
 Erişim doğrulandıktan ve Gmail testi teslim alındıktan sonra [Repository variables](https://github.com/olcaysadik/psn-stock-bot/settings/variables/actions) içinde **`BOT_ENABLED` = `true`** ayarlayın. Bu değer yokken veya `false` iken planlı işin tarayıcısı çalışmaz; elle `monitor` da engellenir. Durdurmak için değişkeni `false` yapın.
 
-Etkin bağımsız zamanlayıcı: **Google Apps Script, yaklaşık 10 dakikada bir**. Kullanıcının bilgisayarının açık olması gerekmez. Özel projede yalnızca bu depo için Actions yazma izni olan süreli anahtar Script Properties'te saklanır; kaynak koduna veya bu depoya konulmaz. Anahtar sona ermeden yenilenmelidir. Kurulum, güvenli durum kontrolü ve durdurma adımları [zamanlayıcı kılavuzundadır](scheduler/google/README.md).
+Etkin bağımsız zamanlayıcı: **Google Apps Script, yaklaşık 5 dakikada bir**. Kullanıcının bilgisayarının açık olması gerekmez. Özel projede yalnızca bu depo için Actions yazma izni olan süreli anahtar Script Properties'te saklanır; kaynak koduna veya bu depoya konulmaz. Anahtar sona ermeden yenilenmelidir. Kurulum, güvenli durum kontrolü ve durdurma adımları [zamanlayıcı kılavuzundadır](scheduler/google/README.md).
 
-GitHub cron yapılandırması `*/10 * * * *` olarak korunur. [GitHub zamanlayıcısı](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule) gecikebilir, işleri düşürebilir veya public depoda 60 günlük hareketsizlik sonrası kapanabilir. Google tetikleyicisi de kesin dakika garantisi vermez. İki kaynak birlikte tetiklerse workflow concurrency ve kalıcı bildirim geçmişi sıraya almayı/tekrar önlemeyi sürdürür.
+GitHub cron yapılandırması `*/5 * * * *` olarak korunur. [GitHub zamanlayıcısı](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule) gecikebilir, işleri düşürebilir veya public depoda 60 günlük hareketsizlik sonrası kapanabilir. Google tetikleyicisi de kesin dakika garantisi vermez. İki kaynak birlikte tetiklerse workflow concurrency ve kalıcı bildirim geçmişi sıraya almayı/tekrar önlemeyi sürdürür.
 
 Standart Ubuntu runner ve public depo kullanılır. [GitHub Actions ücretlendirmesi](https://docs.github.com/en/billing/concepts/product-billing/github-actions) uyarınca public depolardaki standart runner kullanımı ücretsizdir. Artifact'lar yalnızca üç gün saklanır; ücretli/larger runner veya harici ücretli servis eklenmez. Depoyu private yapmak ücretsiz dakika bütçesini değiştirebilir.
 

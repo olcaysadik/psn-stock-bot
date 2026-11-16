@@ -232,7 +232,7 @@ class ConfigurationTests(unittest.TestCase):
         path = Path(__file__).resolve().parents[1] / ".github/workflows/monitor.yml"
         # BaseLoader avoids YAML 1.1 treating the Actions key 'on' as a boolean.
         workflow = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
-        self.assertEqual(workflow["on"]["schedule"][0]["cron"], "*/10 * * * *")
+        self.assertEqual(workflow["on"]["schedule"][0]["cron"], "*/5 * * * *")
         self.assertEqual(workflow["on"]["workflow_dispatch"]["inputs"]["mode"]["options"], ["diagnose", "test", "monitor"])
         self.assertEqual(workflow["concurrency"], {"group": "psn-stock-monitor", "cancel-in-progress": "false"})
         self.assertIn("vars.BOT_ENABLED == 'true'", workflow["jobs"]["validate"]["if"])

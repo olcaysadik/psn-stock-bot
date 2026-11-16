@@ -33,7 +33,7 @@ function harness(options = {}) {
   return {context, values, calls, messages, created, released: () => released};
 }
 
-test('installation sends a safe request, creates a ten-minute clock and records metadata', () => {
+test('installation sends a safe request, creates a five-minute clock and records metadata', () => {
   const h = harness();
   assert.equal(h.context.installPsnScheduler().accepted, true);
   assert.equal(h.calls.length, 1);
@@ -43,7 +43,7 @@ test('installation sends a safe request, creates a ten-minute clock and records 
   assert.equal(request.validateHttpsCertificates, true);
   assert.equal(request.followRedirects, false);
   assert.equal(request.timeoutSeconds, 30);
-  assert.deepEqual(h.created, [{handler: 'dispatchPsnMonitor', minutes: 10}]);
+  assert.deepEqual(h.created, [{handler: 'dispatchPsnMonitor', minutes: 5}]);
   assert.equal(h.values.SCHEDULER_ENABLED, 'true');
   assert.equal(h.values.LAST_DISPATCH_RUN_ID, '12345');
   assert.equal(h.released(), 1);
